@@ -7,13 +7,9 @@
 #include <netinet/in.h>
 #include <errno.h>
 #include <sys/stat.h>
-// struct to return to main
-typedef struct sizeandfile{
-	int size;
-	char* file;
-}Struct;
+#define RAM 52428800
+
 int exists(char* file){
-	printf("%s\n", file);
 	struct stat buffer;
 	int exist = stat(file,&buffer);
 	if (exist == 0)
@@ -33,38 +29,21 @@ int exists(char* file){
 	else
 		return 0;
 }
-// read from file and get size
-Struct getfile(char file[200]){
+
+int getsize(char file[256]){
 	FILE *fp;
 	fp = fopen(file, "rb");
 		if (fp == NULL){
 		printf("\033[31mError: Failed to open file! Aborting.\033[0m\n");
 		exit(-1);
 	}
-
-	Struct sizestruct;
-
-	Struct *sizestructptr = &sizestruct;
+	int size;
 
 
 	fseek(fp, 0L, SEEK_END);
-	sizestructptr->size = ftell(fp);
-	rewind(fp);
-	sizestructptr->file = (char*)malloc(sizestructptr->size);
-	fread(sizestruct.file, 1, sizestructptr->size, fp);
-	printf("File is %d bytes.\n", sizestructptr->size);
+	size = ftell(fp);
 	fclose(fp);
-	return sizestruct;
-}
-//rewrite the file with diff name (testing purpose)
-int putfile(char* buffer,char *name, int size)
-{
-	FILE *wfp;
-	wfp = fopen(name, "wb");
-	printf("\n\nbuffer in putfile(): %s\nsize inside putfile(): %d\n",buffer, size );
-	fwrite(buffer, 1, size, wfp);	
-	fclose(wfp);
-	return 0;
+	return size;
 }
 
 int main(int argc, char *argv[]){
@@ -108,24 +87,33 @@ int main(int argc, char *argv[]){
 			return -1;
 			
 		}
-		printf("%s\n", name);
 		// check method
+		char* file = (char*) malloc(RAM);
+		if(file == NULL){
+			printf("\033[31mError: Failed to allocate memory! Aborting.\033[0m\n");
+			close(clientsocket);
+			return -1;
+
+		}
 		if (strcmp(action, "get") == 0){
 			printf("action: get\n");
-			printf("namesize: %d\nname: %s\n", namesize, name);				
-			Struct result = getfile(name);			
-			int bytesleft = result.size;
-			send(clientsocket, &(result.size), sizeof(result.size), 0);
+			int size = getsize(name);
+			FILE *fp;
+			fp = fopen(name, "rb");
+			int amountread;
+			int bytesleft = size;
+			send(clientsocket, &(size), sizeof(int), 0);
 		
 			do{
-				state = send(clientsocket, result.file, bytesleft, 0 );
+				amountread = fread(file, 1,RAM,fp);
+				state = send(clientsocket, file, amountread, 0 );
 				total = total + state;
 				bytesleft = bytesleft - state;
 		
-			}while(state > 0 && total < result.size);
+			}while(state > 0 && total < size);
 		}
 		else if (strcmp(action, "put") == 0){
-			int portion = 1000000000;
+			printf("action: put\n");	
 			int putsize;
 			recv(clientsocket, &putsize, 4, 0);
 			
@@ -136,14 +124,13 @@ int main(int argc, char *argv[]){
 			wpf = fopen(name, "ab");
 		
 			do{
-				state = recv(clientsocket, server_res, portion, 0);
-				fwrite(server_res, 1, state, wpf);
+				state = recv(clientsocket, file, RAM, 0);
+				fwrite(file, 1, state, wpf);
 				total = total + state;
 			}while(state > 0 && total < putsize);
 	
-			printf("action: put\n");
+			
 			close(clientsocket);		
-			// do shiz
 		}
 		else{
 			printf("\033[31mError: Invalid method! Aborting.\033[0m\n");

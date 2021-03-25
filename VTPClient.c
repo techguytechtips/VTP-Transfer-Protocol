@@ -84,13 +84,14 @@ int main(int argc, char* argv[]) {
 	int recvdata;
 	int state;
 	int total;
+	// allocate memory
 	char* file = (char*) malloc(RAM);
 	if (file == NULL){
 		printf("\033[31mError: Failed to allocate memory! Aborting.\033[0m\n");
 		close(networksocket);
 		return -1;
 	}
-	
+	// get size of filename
 	int namesize = strlen(argv[4]) + 1;
 	send(networksocket, &(namesize),sizeof(int), 0);
 	

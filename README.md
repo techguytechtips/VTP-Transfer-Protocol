@@ -1,1 +1,1 @@
-VTP Transfer Protocol is a program transfer files between a client and server 
+VTP Transfer Protocol is a program to transfer files between a client and server 

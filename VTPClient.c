@@ -81,7 +81,7 @@ int main(int argc, char* argv[]) {
 	}
 	printf("\033[32mConnected!\033[0m\n");
 	// vars for sending data
-	int size;
+	int size = 0;
 	int recvdata;
 	int state;
 	int total;
@@ -100,8 +100,14 @@ int main(int argc, char* argv[]) {
 		// send the method and the filename
 		send(networksocket, argv[3], 4, 0);
 		send(networksocket, argv[4], namesize, 0);
-		// get the size of the file	
+		// get the size of the file
 		size = getsize(argv[4]);
+		if (size < 1){
+			printf("\033[31mError: File not found or is empty! Aborting.\033[0m\n");
+			close(networksocket);
+			free(file);
+			return -1;
+		}
 		int amountread;
 		// send the size of the file
 		send(networksocket, &(size), sizeof(size), 0);
@@ -114,7 +120,7 @@ int main(int argc, char* argv[]) {
 			amountread = fread(file, 1,RAM, fp);
 			state = send(networksocket, file, amountread, 0 );
 			total = total + state;
-			printf("\rsent: %d bytes\n", total);
+			printf("\rsent: %d bytes", total);
 			fflush(stdout);
 		
 		}while(state > 0 && total < size);
@@ -122,7 +128,7 @@ int main(int argc, char* argv[]) {
 		fclose(fp);
 	}
 	else if(strcmp(argv[3], "get") == 0){
-		// ssend the method and the file name
+		// send the method and the file name
 		send(networksocket, argv[3], 4, 0);
 		send(networksocket, argv[4], namesize, 0);
 		// open the file for writing		
@@ -130,7 +136,7 @@ int main(int argc, char* argv[]) {
 		exists(argv[4]);
 		wpf = fopen(argv[4], "ab");
 		// receive size of file
-		recv(networksocket, &size, 4, 0);			
+		recv(networksocket, &size, 4, 0);
 		printf("File is %d bytes.\n", size);
 
 		// main loop for receiving and writing data
@@ -138,7 +144,7 @@ int main(int argc, char* argv[]) {
 			state = recv(networksocket, file, RAM, 0);
 			fwrite(file, 1, state, wpf);
 			total = total + state;
-			printf("\rreceived: %d bytes\n", total);
+			printf("\rreceived: %d bytes", total);
 			fflush(stdout);
 		}while(state > 0 && total < size);
 		// close the file
@@ -147,12 +153,14 @@ int main(int argc, char* argv[]) {
 	}
 	// check valid method
 	else{
-		printf("\033[31mError: Invalid method!, valid methods: put|get.\033[0m\n");
+		printf("\n\033[31mError: Invalid method!, valid methods: put|get.\033[0m\n");
 		close(networksocket);
+		free(file);
 		return -1;
 	}
 	// close the socket
-	printf("\033[32mFinished! Transferred %d bytes.\033[0m\n", total);
+	printf("\n\033[32mFinished! Transferred %d bytes.\033[0m\n", total);
 	close(networksocket);
+	free(file);
 	return 0;
 }

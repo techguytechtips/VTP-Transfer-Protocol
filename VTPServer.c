@@ -7,16 +7,20 @@
 #include <netinet/in.h>
 #include <errno.h>
 #include <sys/stat.h>
+// max ram 50 MB for buffer
 #define RAM 52428800
 
+// function to check if the file exists
 int exists(char* file){
 	struct stat buffer;
 	int exist = stat(file,&buffer);
+	// stat returns 0 if it reads the file which means it exists
 	if (exist == 0)
 	{
 		printf("File exists, overwrite? [y|n]: ");
 		if(getchar() == 'y'){
 			printf("Overwriting.\n");
+			// delete the file
 			char rm[263] = "rm -rf ";
 			strcat(rm, file);
 			system(rm);
@@ -29,17 +33,17 @@ int exists(char* file){
 	else
 		return 0;
 }
-
+// function to get the size of the file passed
 int getsize(char file[256]){
+	int size;
 	FILE *fp;
+	// open the file
 	fp = fopen(file, "rb");
 		if (fp == NULL){
-		printf("\033[31mError: Failed to open file! Aborting.\033[0m\n");
-		exit(-1);
+		return -1;
 	}
-	int size;
-
-
+	
+// seek to the end then report where the end is
 	fseek(fp, 0L, SEEK_END);
 	size = ftell(fp);
 	fclose(fp);
@@ -47,8 +51,8 @@ int getsize(char file[256]){
 }
 
 int main(int argc, char *argv[]){
+	// check if a port was specified, otherwise use default
 	int port;
-	
 	if(argc > 1){
 		port = atoi(argv[1]);
 
@@ -59,7 +63,7 @@ int main(int argc, char *argv[]){
 		port = 9067;
 	}
 	
-	// socket stuff
+	// make the socket fd
 	int serversocket;
 	serversocket = socket(AF_INET, SOCK_STREAM, 0);
 	struct sockaddr_in server_address;
@@ -67,44 +71,59 @@ int main(int argc, char *argv[]){
 	server_address.sin_port = htons(port);
 	server_address.sin_addr.s_addr = INADDR_ANY;
 	bind(serversocket, (struct sockaddr*) &server_address, sizeof(server_address));
+	// listen for connnections
 	listen(serversocket, 2);
 	int clientsocket = accept(serversocket, NULL, NULL);
-	int state;
-	int total;
+
 
 	printf("\033[32mConnected!\033[0m\n");
+		// declare vars
+		int size = 0;
+		int state;
+		int total;
 		int namesize;
 		char action[4];
-		char name[256];		
+		char name[256];
+		// get the size of the file name
 		recv(clientsocket, &namesize, sizeof(int), 0);
-		
-		
+		// get the method (put or get)
 		recv(clientsocket, &action, sizeof(action), 0);
-	
+		// receive the file name
 		if (recv(clientsocket, &name, namesize, 0) < 1)
 		{
 			printf("\033[31mError: Failed receiving data! Aborting.\033[0m\n");
 			close(clientsocket);
+			close(serversocket);
 			return -1;
 			
 		}
-
+		// allocate memory
 		char* file = (char*) malloc(RAM);
 		if(file == NULL){
 			printf("\033[31mError: Failed to allocate memory! Aborting.\033[0m\n");
 			close(clientsocket);
+			close(serversocket);
 			return -1;
 		}
-
+		// if statement to check the method
 		if (strcmp(action, "get") == 0){
 			printf("action: get\n");
+			// open file
+			// get size of file
+			size = getsize(name);
+			if (size < 1){
+				printf("\033[31mError: File not found or is empty! Aborting.\033[0m\n");
+				close(clientsocket);
+				close(serversocket);
+				free(file);
+				return -1;
+			}
 			FILE *fp;
 			fp = fopen(name, "rb");
-			int size = getsize(name);	
 			int amountread;
 			int bytesleft = size;
 			send(clientsocket, &(size), sizeof(int), 0);
-		
+			// loop to send the data
 			do{
 				amountread = fread(file, 1,RAM,fp);
 				state = send(clientsocket, file, amountread, 0 );
@@ -112,28 +131,32 @@ int main(int argc, char *argv[]){
 				bytesleft = bytesleft - state;
 		
 			}while(state > 0 && total < size);
+			fclose(fp);
+			close(clientsocket);
 		}
 		else if (strcmp(action, "put") == 0){
-			printf("action: put\n");	
-			int putsize;
-			recv(clientsocket, &putsize, 4, 0);
-			
+			printf("action: put\n");
+			// get the size of the incoming file
+			int size;
+			recv(clientsocket, &size, 4, 0);
+			// check if it exists
 			exists(name);
-			FILE *wpf;
-			wpf = fopen(name, "ab");
-		
+			// open the file
+			FILE *wfp;
+			wfp = fopen(name, "ab");
+			// main loop for receiving and writing data
 			do{
 				state = recv(clientsocket, file, RAM, 0);
-				fwrite(file, 1, state, wpf);
+				fwrite(file, 1, state, wfp);
 				total = total + state;
-			}while(state > 0 && total < putsize);
-	
-			
+			}while(state > 0 && total < size);
+			fclose(wfp);
 			close(clientsocket);
 		}
 		else{
 			printf("\033[31mError: Invalid method! Aborting.\033[0m\n");
 			close(clientsocket);
+			close(serversocket);
 			free(file);
 			return -1;
 		}

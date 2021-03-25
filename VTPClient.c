@@ -43,8 +43,7 @@ int getsize(char file[250]){
 	// open the file
 	fp = fopen(file, "rb");
 	if (fp == NULL){
-		printf("\033[31mError: Failed to open file! Aborting.\033[0m\n");
-		exit(-1);
+		return -1;
 	}
 	// seek to the end and report where the end is
 	fseek(fp, 0L, SEEK_END);
@@ -95,7 +94,7 @@ int main(int argc, char* argv[]) {
 	int namesize = strlen(argv[4]) + 1;
 	send(networksocket, &(namesize),sizeof(int), 0);
 	
-	// if statement to check the data
+	// if statement to check the method
 	if(strcmp(argv[3], "put") == 0){
 		// send the method and the filename
 		send(networksocket, argv[3], 4, 0);
@@ -132,9 +131,9 @@ int main(int argc, char* argv[]) {
 		send(networksocket, argv[3], 4, 0);
 		send(networksocket, argv[4], namesize, 0);
 		// open the file for writing		
-		FILE *wpf;
+		FILE *wfp;
 		exists(argv[4]);
-		wpf = fopen(argv[4], "ab");
+		wfp = fopen(argv[4], "ab");
 		// receive size of file
 		recv(networksocket, &size, 4, 0);
 		printf("File is %d bytes.\n", size);
@@ -142,13 +141,13 @@ int main(int argc, char* argv[]) {
 		// main loop for receiving and writing data
 		do{
 			state = recv(networksocket, file, RAM, 0);
-			fwrite(file, 1, state, wpf);
+			fwrite(file, 1, state, wfp);
 			total = total + state;
 			printf("\rreceived: %d bytes", total);
 			fflush(stdout);
 		}while(state > 0 && total < size);
 		// close the file
-		fclose(wpf);
+		fclose(wfp);
 
 	}
 	// check valid method

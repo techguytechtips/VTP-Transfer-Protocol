@@ -55,20 +55,22 @@ int getsize(char file[250]){
 
 int main(int argc, char* argv[]) {
 	// arg checking
-	if (argc <  4){
-		printf("Error: Not enough args.\nUsage: %s <ip address> <put|get> <file>\n", argv[0]);
+	if (argc <  5){
+		printf("Error: Not enough args.\nUsage: %s <ip address> <port> <put|get> <file>\n", argv[0]);
 		return -1;
 	}
 	if (strlen(argv[3]) > 255) {
 		printf("\033[31mError: File name too large\033[0m\n");
 	
 	}
+	int port = atoi(argv[2]);
+
 
 	// make the socket fd
 	int networksocket = socket(AF_INET, SOCK_STREAM, 0);
 	struct sockaddr_in server_address;
 	server_address.sin_family = AF_INET;
-	server_address.sin_port = htons(9067);
+	server_address.sin_port = htons(port);
 	server_address.sin_addr.s_addr = inet_addr(argv[1]);
 	
 	// connect to the server
@@ -90,43 +92,43 @@ int main(int argc, char* argv[]) {
 		return -1;
 	}
 	
-	int namesize = strlen(argv[3]) + 1;
+	int namesize = strlen(argv[4]) + 1;
 	send(networksocket, &(namesize),sizeof(int), 0);
 	
 	// if statement to check the data
-	if(strcmp(argv[2], "put") == 0){
+	if(strcmp(argv[3], "put") == 0){
 		// send the method and the filename
-		send(networksocket, argv[2], 4, 0);
-		send(networksocket, argv[3], namesize, 0);
+		send(networksocket, argv[3], 4, 0);
+		send(networksocket, argv[4], namesize, 0);
 		// get the size of the file	
-		size = getsize(argv[3]);
+		size = getsize(argv[4]);
 		int amountread;
 		// send the size of the file
 		send(networksocket, &(size), sizeof(size), 0);
 		printf("File is %d bytes.\n", size);
 		// open the file for reading
 		FILE *fp;
-		fp = fopen(argv[3], "rb");
+		fp = fopen(argv[4], "rb");
 		// loop to send the data
 		do{
 			amountread = fread(file, 1,RAM, fp);
 			state = send(networksocket, file, amountread, 0 );
 			total = total + state;
-			printf("\rtotal: %d", total);
+			printf("\rsent: %d bytes\n", total);
 			fflush(stdout);
 		
 		}while(state > 0 && total < size);
 		// close the file
 		fclose(fp);
 	}
-	else if(strcmp(argv[2], "get") == 0){
+	else if(strcmp(argv[3], "get") == 0){
 		// ssend the method and the file name
-		send(networksocket, argv[2], 4, 0);
-		send(networksocket, argv[3], namesize, 0);
+		send(networksocket, argv[3], 4, 0);
+		send(networksocket, argv[4], namesize, 0);
 		// open the file for writing		
 		FILE *wpf;
-		exists(argv[3]);
-		wpf = fopen(argv[3], "ab");
+		exists(argv[4]);
+		wpf = fopen(argv[4], "ab");
 		// receive size of file
 		recv(networksocket, &size, 4, 0);			
 		printf("File is %d bytes.\n", size);
@@ -136,7 +138,7 @@ int main(int argc, char* argv[]) {
 			state = recv(networksocket, file, RAM, 0);
 			fwrite(file, 1, state, wpf);
 			total = total + state;
-			printf("\rwrote: %d", total);
+			printf("\rreceived: %d bytes\n", total);
 			fflush(stdout);
 		}while(state > 0 && total < size);
 		// close the file

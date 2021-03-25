@@ -68,14 +68,24 @@ int putfile(char* buffer,char *name, int size)
 }
 
 int main(int argc, char *argv[]){
+	int port;
+	
+	if(argc > 1){
+		port = atoi(argv[1]);
 
+	}
+	else 
+	{
+		printf("Note: Using default port 9067 as none was specified\n");
+		port = 9067;
+	}
 	
 	// socket stuff
 	int serversocket;
 	serversocket = socket(AF_INET, SOCK_STREAM, 0);
 	struct sockaddr_in server_address;
 	server_address.sin_family = AF_INET;
-	server_address.sin_port = htons(9067);
+	server_address.sin_port = htons(port);
 	server_address.sin_addr.s_addr = INADDR_ANY;
 	bind(serversocket, (struct sockaddr*) &server_address, sizeof(server_address));
 	listen(serversocket, 2);
@@ -105,7 +115,6 @@ int main(int argc, char *argv[]){
 			printf("namesize: %d\nname: %s\n", namesize, name);				
 			Struct result = getfile(name);			
 			int bytesleft = result.size;
-			printf("%d", result.size);	
 			send(clientsocket, &(result.size), sizeof(result.size), 0);
 		
 			do{

@@ -74,12 +74,13 @@ int main(int argc, char *argv[]){
 
 	printf("\033[32mConnected!\033[0m\n");
 		int namesize;
+		char action[4];
+		char name[256];		
 		recv(clientsocket, &namesize, sizeof(int), 0);
 		
-		char action[4];		
-		recv(clientsocket, &action, sizeof(action), 0);
-		char name[256];		
 		
+		recv(clientsocket, &action, sizeof(action), 0);
+	
 		if (recv(clientsocket, &name, namesize, 0) < 1)
 		{
 			printf("\033[31mError: Failed receiving data! Aborting.\033[0m\n");
@@ -87,19 +88,19 @@ int main(int argc, char *argv[]){
 			return -1;
 			
 		}
-		// check method
+
 		char* file = (char*) malloc(RAM);
 		if(file == NULL){
 			printf("\033[31mError: Failed to allocate memory! Aborting.\033[0m\n");
 			close(clientsocket);
 			return -1;
-
 		}
+
 		if (strcmp(action, "get") == 0){
 			printf("action: get\n");
-			int size = getsize(name);
 			FILE *fp;
 			fp = fopen(name, "rb");
+			int size = getsize(name);	
 			int amountread;
 			int bytesleft = size;
 			send(clientsocket, &(size), sizeof(int), 0);
@@ -117,10 +118,8 @@ int main(int argc, char *argv[]){
 			int putsize;
 			recv(clientsocket, &putsize, 4, 0);
 			
-			FILE *wpf;
-			char* server_res = malloc(putsize);
-
 			exists(name);
+			FILE *wpf;
 			wpf = fopen(name, "ab");
 		
 			do{
@@ -130,14 +129,15 @@ int main(int argc, char *argv[]){
 			}while(state > 0 && total < putsize);
 	
 			
-			close(clientsocket);		
+			close(clientsocket);
 		}
 		else{
 			printf("\033[31mError: Invalid method! Aborting.\033[0m\n");
 			close(clientsocket);
+			free(file);
 			return -1;
 		}
-
+	free(file);
 	printf("\033[32mFinished! sent %d bytes\033[32m\n", total);
 	close(serversocket);
 	return 0;

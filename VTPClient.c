@@ -38,12 +38,12 @@ int exists(char* file){
 }
 // function to get the size of file passed
 int getsize(char file[250]){
-	int size;
+	unsigned long size;
 	FILE *fp;
 	// open the file
 	fp = fopen(file, "rb");
 	if (fp == NULL){
-		return -1;
+		return 0;
 	}
 	// seek to the end and report where the end is
 	fseek(fp, 0L, SEEK_END);
@@ -80,10 +80,9 @@ int main(int argc, char* argv[]) {
 	}
 	printf("\033[32mConnected!\033[0m\n");
 	// vars for sending data
-	int size = 0;
-	int recvdata;
+	unsigned long size = 0;
 	int state;
-	int total;
+	unsigned long total;
 	// allocate memory
 	char* file = (char*) malloc(RAM);
 	if (file == NULL){
@@ -92,8 +91,9 @@ int main(int argc, char* argv[]) {
 		return -1;
 	}
 	// get size of filename
-	int namesize = strlen(argv[4]) + 1;
-	send(networksocket, &(namesize),sizeof(int), 0);
+	short namesize = strlen(argv[4]) + 1;
+	short hostnamesize = htons(namesize);	
+	send(networksocket, &(namesize), sizeof(short), 0);
 	
 	// if statement to check the method
 	if(strcmp(argv[3], "put") == 0){
@@ -102,15 +102,16 @@ int main(int argc, char* argv[]) {
 		send(networksocket, argv[4], namesize, 0);
 		// get the size of the file
 		size = getsize(argv[4]);
-		if (size < 1){
+		unsigned long networksize = htonl(size);
+		if (size == 0){
 			printf("\033[31mError: File not found or is empty! Aborting.\033[0m\n");
 			close(networksocket);
 			free(file);
 			return -1;
 		}
-		int amountread;
+		unsigned long amountread;
 		// send the size of the file
-		send(networksocket, &(size), sizeof(size), 0);
+		send(networksocket, &(networksize), sizeof(unsigned long), 0);
 		printf("File is %d bytes.\n", size);
 		// open the file for reading
 		FILE *fp;

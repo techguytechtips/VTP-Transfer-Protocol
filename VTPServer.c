@@ -86,7 +86,7 @@ int main(int argc, char *argv[]){
 		char name[256];
 		// get the size of the file name
 		recv(clientsocket, &namesize, sizeof(short), 0);
-		short hostnamesize = ntohs(namesize);
+		namesize = ntohs(namesize);
 		// get the method (put or get)
 		recv(clientsocket, &action, sizeof(action), 0);
 		// receive the file name
@@ -111,7 +111,6 @@ int main(int argc, char *argv[]){
 		// if statement to check the method
 		if (strcmp(action, "get") == 0){
 			printf("action: get\n");
-			// open file
 			// get size of file
 			size = getsize(name);
 			if (size == 0){
@@ -122,10 +121,11 @@ int main(int argc, char *argv[]){
 				return -1;
 			}
 			FILE *fp;
+			// open the file
 			fp = fopen(name, "rb");
 			unsigned long amountread;
-			unsigned long convertedsize = htonl(size);
-			send(clientsocket, &convertedsize, sizeof(unsigned long), 0);
+			unsigned long networksize = htonl(size);
+			send(clientsocket, &networksize, sizeof(unsigned long), 0);
 			// loop to send the data
 			do{
 				amountread = fread(file, 1,RAM,fp);

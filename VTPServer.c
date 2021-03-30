@@ -139,7 +139,7 @@ int main(int argc, char *argv[]){
 		else if (strcmp(action, "put") == 0){
 			printf("action: put\n");
 			// get the size of the incoming file
-			recv(clientsocket, &size, 4, 0);
+			recv(clientsocket, &size, sizeof(unsigned long), 0);
 			size = ntohl(size);
 			// check if it exists
 			exists(name);

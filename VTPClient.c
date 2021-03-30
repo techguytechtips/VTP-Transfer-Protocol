@@ -137,7 +137,7 @@ int main(int argc, char* argv[]) {
 		exists(argv[4]);
 		wfp = fopen(argv[4], "ab");
 		// receive size of file
-		recv(networksocket, &size, 4, 0);
+		recv(networksocket, &size, sizeof(unsigned long), 0);
 		size = ntohl(size);
 		printf("File is %lu bytes.\n", size);
 

@@ -26,9 +26,10 @@ int exists(char* file){
 			system(rm);
 			return 0;
 		}
-		else
+		else{
 			printf("Not overwriting.\n");
 			return 0;
+		}
 	}
 	else
 		return 0;
@@ -80,7 +81,7 @@ int main(int argc, char *argv[]){
 		// declare vars
 		unsigned long size = 0;
 		int state;
-		unsigned total;
+		unsigned long total;
 		short namesize;
 		char action[4];
 		char name[256];
@@ -90,7 +91,7 @@ int main(int argc, char *argv[]){
 		// get the method (put or get)
 		recv(clientsocket, &action, sizeof(action), 0);
 		// receive the file name
-		if (recv(clientsocket, &name, hostnamesize, 0) < 1)
+		if (recv(clientsocket, &name, namesize, 0) < 1)
 		{
 			printf("\033[31mError: Failed receiving data! Aborting.\033[0m\n");
 			close(clientsocket);
@@ -98,7 +99,6 @@ int main(int argc, char *argv[]){
 			return -1;
 			
 		}
-		printf("action: %s, namesize: %d, name: %s, hostnamesize: %d\n", action, namesize, name, hostnamesize);
 
 		// allocate memory
 		char* file = (char*) malloc(RAM);
@@ -163,7 +163,7 @@ int main(int argc, char *argv[]){
 			return -1;
 		}
 	free(file);
-	printf("\033[32mFinished! sent %d bytes\033[32m\n", total);
+	printf("\033[32mFinished! sent %lu bytes\033[32m\n", total);
 	close(serversocket);
 	return 0;
 }

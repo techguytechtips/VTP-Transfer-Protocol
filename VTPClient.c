@@ -92,8 +92,8 @@ int main(int argc, char* argv[]) {
 	}
 	// get size of filename
 	short namesize = strlen(argv[4]) + 1;
-	short hostnamesize = htons(namesize);	
-	send(networksocket, &(hostnamesize), sizeof(short), 0);
+	short networknamesize = htons(namesize);	
+	send(networksocket, &(networknamesize), sizeof(short), 0);
 	
 	// if statement to check the method
 	if(strcmp(argv[3], "put") == 0){
@@ -112,7 +112,7 @@ int main(int argc, char* argv[]) {
 		unsigned long amountread;
 		// send the size of the file
 		send(networksocket, &(networksize), sizeof(unsigned long), 0);
-		printf("File is %d bytes.\n", size);
+		printf("File is %lu bytes.\n", size);
 		// open the file for reading
 		FILE *fp;
 		fp = fopen(argv[4], "rb");
@@ -121,7 +121,7 @@ int main(int argc, char* argv[]) {
 			amountread = fread(file, 1,RAM, fp);
 			state = send(networksocket, file, amountread, 0 );
 			total = total + state;
-			printf("\rsent: %d bytes", total);
+			printf("\rsent: %lu bytes", total);
 			fflush(stdout);
 		
 		}while(state > 0 && total < size);
@@ -138,14 +138,15 @@ int main(int argc, char* argv[]) {
 		wfp = fopen(argv[4], "ab");
 		// receive size of file
 		recv(networksocket, &size, 4, 0);
-		printf("File is %d bytes.\n", size);
+		size = ntohl(size);
+		printf("File is %lu bytes.\n", size);
 
 		// main loop for receiving and writing data
 		do{
 			state = recv(networksocket, file, RAM, 0);
 			fwrite(file, 1, state, wfp);
 			total = total + state;
-			printf("\rreceived: %d bytes", total);
+			printf("\rreceived: %lu bytes", total);
 			fflush(stdout);
 		}while(state > 0 && total < size);
 		// close the file
@@ -160,7 +161,7 @@ int main(int argc, char* argv[]) {
 		return -1;
 	}
 	// close the socket
-	printf("\n\033[32mFinished! Transferred %d bytes.\033[0m\n", total);
+	printf("\n\033[32mFinished! Transferred %lu bytes.\033[0m\n", total);
 	close(networksocket);
 	free(file);
 	return 0;

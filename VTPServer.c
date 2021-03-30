@@ -90,7 +90,7 @@ int main(int argc, char *argv[]){
 		// get the method (put or get)
 		recv(clientsocket, &action, sizeof(action), 0);
 		// receive the file name
-		if (recv(clientsocket, &name, namesize, 0) < 1)
+		if (recv(clientsocket, &name, hostnamesize, 0) < 1)
 		{
 			printf("\033[31mError: Failed receiving data! Aborting.\033[0m\n");
 			close(clientsocket);
@@ -98,6 +98,8 @@ int main(int argc, char *argv[]){
 			return -1;
 			
 		}
+		printf("action: %s, namesize: %d, name: %s, hostnamesize: %d\n", action, namesize, name, hostnamesize);
+
 		// allocate memory
 		char* file = (char*) malloc(RAM);
 		if(file == NULL){

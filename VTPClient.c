@@ -93,7 +93,7 @@ int main(int argc, char* argv[]) {
 	// get size of filename
 	short namesize = strlen(argv[4]) + 1;
 	short hostnamesize = htons(namesize);	
-	send(networksocket, &(namesize), sizeof(short), 0);
+	send(networksocket, &(hostnamesize), sizeof(short), 0);
 	
 	// if statement to check the method
 	if(strcmp(argv[3], "put") == 0){

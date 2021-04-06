@@ -38,12 +38,12 @@ int exists(char* file){
 }
 // function to get the size of file passed
 int getsize(char file[250]){
-	int size;
+	unsigned long size;
 	FILE *fp;
 	// open the file
 	fp = fopen(file, "rb");
 	if (fp == NULL){
-		return -1;
+		return 0;
 	}
 	// seek to the end and report where the end is
 	fseek(fp, 0L, SEEK_END);
@@ -80,10 +80,9 @@ int main(int argc, char* argv[]) {
 	}
 	printf("\033[32mConnected!\033[0m\n");
 	// vars for sending data
-	int size = 0;
-	int recvdata;
+	unsigned long size = 0;
 	int state;
-	int total;
+	unsigned long total;
 	// allocate memory
 	char* file = (char*) malloc(RAM);
 	if (file == NULL){
@@ -92,8 +91,9 @@ int main(int argc, char* argv[]) {
 		return -1;
 	}
 	// get size of filename
-	int namesize = strlen(argv[4]) + 1;
-	send(networksocket, &(namesize),sizeof(int), 0);
+	short namesize = strlen(argv[4]) + 1;
+	short networknamesize = htons(namesize);	
+	send(networksocket, &(networknamesize), sizeof(short), 0);
 	
 	// if statement to check the method
 	if(strcmp(argv[3], "put") == 0){
@@ -102,16 +102,17 @@ int main(int argc, char* argv[]) {
 		send(networksocket, argv[4], namesize, 0);
 		// get the size of the file
 		size = getsize(argv[4]);
-		if (size < 1){
+		unsigned long networksize = htonl(size);
+		if (size == 0){
 			printf("\033[31mError: File not found or is empty! Aborting.\033[0m\n");
 			close(networksocket);
 			free(file);
 			return -1;
 		}
-		int amountread;
+		unsigned long amountread;
 		// send the size of the file
-		send(networksocket, &(size), sizeof(size), 0);
-		printf("File is %d bytes.\n", size);
+		send(networksocket, &(networksize), sizeof(unsigned long), 0);
+		printf("File is %lu bytes.\n", size);
 		// open the file for reading
 		FILE *fp;
 		fp = fopen(argv[4], "rb");
@@ -120,7 +121,7 @@ int main(int argc, char* argv[]) {
 			amountread = fread(file, 1,RAM, fp);
 			state = send(networksocket, file, amountread, 0 );
 			total = total + state;
-			printf("\rsent: %d bytes", total);
+			printf("\rsent: %lu bytes", total);
 			fflush(stdout);
 		
 		}while(state > 0 && total < size);
@@ -136,15 +137,16 @@ int main(int argc, char* argv[]) {
 		exists(argv[4]);
 		wfp = fopen(argv[4], "ab");
 		// receive size of file
-		recv(networksocket, &size, 4, 0);
-		printf("File is %d bytes.\n", size);
+		recv(networksocket, &size, sizeof(unsigned long), 0);
+		size = ntohl(size);
+		printf("File is %lu bytes.\n", size);
 
 		// main loop for receiving and writing data
 		do{
 			state = recv(networksocket, file, RAM, 0);
 			fwrite(file, 1, state, wfp);
 			total = total + state;
-			printf("\rreceived: %d bytes", total);
+			printf("\rreceived: %lu bytes", total);
 			fflush(stdout);
 		}while(state > 0 && total < size);
 		// close the file
@@ -159,7 +161,7 @@ int main(int argc, char* argv[]) {
 		return -1;
 	}
 	// close the socket
-	printf("\n\033[32mFinished! Transferred %d bytes.\033[0m\n", total);
+	printf("\n\033[32mFinished! Transferred %lu bytes.\033[0m\n", total);
 	close(networksocket);
 	free(file);
 	return 0;

@@ -26,21 +26,22 @@ int exists(char* file){
 			system(rm);
 			return 0;
 		}
-		else
+		else{
 			printf("Not overwriting.\n");
 			return 0;
+		}
 	}
 	else
 		return 0;
 }
 // function to get the size of the file passed
 int getsize(char file[256]){
-	int size;
+	unsigned long size;
 	FILE *fp;
 	// open the file
 	fp = fopen(file, "rb");
 		if (fp == NULL){
-		return -1;
+		return 0;
 	}
 	
 // seek to the end then report where the end is
@@ -78,14 +79,15 @@ int main(int argc, char *argv[]){
 
 	printf("\033[32mConnected!\033[0m\n");
 		// declare vars
-		int size = 0;
+		unsigned long size = 0;
 		int state;
-		int total;
-		int namesize;
+		unsigned long total;
+		short namesize;
 		char action[4];
 		char name[256];
 		// get the size of the file name
-		recv(clientsocket, &namesize, sizeof(int), 0);
+		recv(clientsocket, &namesize, sizeof(short), 0);
+		namesize = ntohs(namesize);
 		// get the method (put or get)
 		recv(clientsocket, &action, sizeof(action), 0);
 		// receive the file name
@@ -97,6 +99,7 @@ int main(int argc, char *argv[]){
 			return -1;
 			
 		}
+
 		// allocate memory
 		char* file = (char*) malloc(RAM);
 		if(file == NULL){
@@ -108,10 +111,9 @@ int main(int argc, char *argv[]){
 		// if statement to check the method
 		if (strcmp(action, "get") == 0){
 			printf("action: get\n");
-			// open file
 			// get size of file
 			size = getsize(name);
-			if (size < 1){
+			if (size == 0){
 				printf("\033[31mError: File not found or is empty! Aborting.\033[0m\n");
 				close(clientsocket);
 				close(serversocket);
@@ -119,16 +121,16 @@ int main(int argc, char *argv[]){
 				return -1;
 			}
 			FILE *fp;
+			// open the file
 			fp = fopen(name, "rb");
-			int amountread;
-			int bytesleft = size;
-			send(clientsocket, &(size), sizeof(int), 0);
+			unsigned long amountread;
+			unsigned long networksize = htonl(size);
+			send(clientsocket, &networksize, sizeof(unsigned long), 0);
 			// loop to send the data
 			do{
 				amountread = fread(file, 1,RAM,fp);
 				state = send(clientsocket, file, amountread, 0 );
 				total = total + state;
-				bytesleft = bytesleft - state;
 		
 			}while(state > 0 && total < size);
 			fclose(fp);
@@ -137,8 +139,8 @@ int main(int argc, char *argv[]){
 		else if (strcmp(action, "put") == 0){
 			printf("action: put\n");
 			// get the size of the incoming file
-			int size;
-			recv(clientsocket, &size, 4, 0);
+			recv(clientsocket, &size, sizeof(unsigned long), 0);
+			size = ntohl(size);
 			// check if it exists
 			exists(name);
 			// open the file
@@ -161,7 +163,7 @@ int main(int argc, char *argv[]){
 			return -1;
 		}
 	free(file);
-	printf("\033[32mFinished! sent %d bytes\033[32m\n", total);
+	printf("\033[32mFinished! sent %lu bytes\033[32m\n", total);
 	close(serversocket);
 	return 0;
 }

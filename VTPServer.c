@@ -7,9 +7,10 @@
 #include <netinet/in.h>
 #include <errno.h>
 #include <sys/stat.h>
+#include <signal.h>
 // max ram 50 MB for buffer
 #define RAM 52428800
-
+int sig = 0;
 // function to check if the file exists
 int exists(char* file){
 	struct stat buffer;
@@ -50,8 +51,12 @@ int getsize(char file[256]){
 	fclose(fp);
 	return size;
 }
-
+void sigHandler(int sig_num){
+	signal(SIGINT, sigHandler);
+	sig = 1;
+}
 int main(int argc, char *argv[]){
+	
 	// check if a port was specified, otherwise use default
 	int port;
 	if(argc > 1){
@@ -75,7 +80,7 @@ int main(int argc, char *argv[]){
 	// listen for connnections
 	listen(serversocket, 2);
 	int clientsocket = accept(serversocket, NULL, NULL);
-
+	signal(SIGINT, sigHandler);	
 
 	printf("\033[32mConnected!\033[0m\n");
 		// declare vars
@@ -128,6 +133,13 @@ int main(int argc, char *argv[]){
 			send(clientsocket, &networksize, sizeof(unsigned long), 0);
 			// loop to send the data
 			do{
+				if (sig > 0){
+					printf("\nreceived SIGNINT, exiting.\n");
+					close(serversocket);
+					close(clientsocket);
+					fclose(fp);
+					return 0;	
+				}
 				amountread = fread(file, 1,RAM,fp);
 				state = send(clientsocket, file, amountread, 0 );
 				total = total + state;
@@ -148,6 +160,14 @@ int main(int argc, char *argv[]){
 			wfp = fopen(name, "ab");
 			// main loop for receiving and writing data
 			do{
+				if (sig > 0){
+					printf("\nreceived SIGNINT, exiting.\n");
+					close(serversocket);
+					close(clientsocket);
+					fclose(wfp);
+					return 0;	
+				}
+	
 				state = recv(clientsocket, file, RAM, 0);
 				fwrite(file, 1, state, wfp);
 				total = total + state;

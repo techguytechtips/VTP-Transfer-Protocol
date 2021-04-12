@@ -8,9 +8,10 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include <sys/stat.h>
+#include <signal.h>
 // max ram 50 MB for buffer
 #define RAM 52428800
-
+int sig = 0;
 // function to check if the file exists
 int exists(char* file){
 	struct stat buffer;
@@ -51,7 +52,10 @@ int getsize(char file[250]){
 	fclose(fp);
 	return size;
 }
-
+void sigHandler(int sig_num){
+	signal(SIGINT, sigHandler);
+	sig = 1;
+}
 int main(int argc, char* argv[]) {
 	// arg checking
 	if (argc <  5){
@@ -118,6 +122,13 @@ int main(int argc, char* argv[]) {
 		fp = fopen(argv[4], "rb");
 		// loop to send the data
 		do{
+			if (sig > 0){
+				printf("\nreceived SIGNINT, exiting.\n");
+				close(networksocket);
+				fclose(fp);
+				return 0;
+			}
+
 			amountread = fread(file, 1,RAM, fp);
 			state = send(networksocket, file, amountread, 0 );
 			total = total + state;
@@ -143,6 +154,13 @@ int main(int argc, char* argv[]) {
 
 		// main loop for receiving and writing data
 		do{
+			if (sig > 0){
+				printf("\nreceived SIGNINT, exiting.\n");
+				close(networksocket);
+				fclose(wfp);
+				return 0;	
+			}
+
 			state = recv(networksocket, file, RAM, 0);
 			fwrite(file, 1, state, wfp);
 			total = total + state;

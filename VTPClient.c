@@ -83,6 +83,7 @@ int main(int argc, char* argv[]) {
 		return -1;
 	}
 	printf("\033[32mConnected!\033[0m\n");
+	signal(SIGINT, sigHandler);
 	// vars for sending data
 	unsigned long size = 0;
 	int state;
